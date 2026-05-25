@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary==2.9.10
+requests
+pydantic
+python-dotenv
+openpyxl
+pandas
+pytest
+httpx
+python-multipart

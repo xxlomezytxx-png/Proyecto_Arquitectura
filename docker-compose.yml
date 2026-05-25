@@ -1,0 +1,420 @@
+version: "3.9"
+
+# Docker Compose lee automáticamente el archivo .env de la misma carpeta.
+# Copia .env.example como .env y completa los valores antes de levantar.
+
+networks:
+  bookflow-network:
+    driver: bridge
+
+volumes:
+  auth-db-data:
+  inventory-db-data:
+  catalog-db-data:
+  config-db-data:
+  pricing-db-data:
+  enrichment-db-data:
+  order-db-data:
+  assistant-db-data:
+  audit-db-data:
+
+services:
+
+  # ─────────────────────────────────────────
+  # BASES DE DATOS (una por servicio)
+  # ─────────────────────────────────────────
+  auth-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_AUTH}
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    networks:
+      - bookflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  inventory-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_INVENTORY}
+    volumes:
+      - inventory-db-data:/var/lib/postgresql/data
+    networks:
+      - bookflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  catalog-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_CATALOG}
+    volumes:
+      - catalog-db-data:/var/lib/postgresql/data
+    networks:
+      - bookflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  config-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_CONFIG}
+    volumes:
+      - config-db-data:/var/lib/postgresql/data
+    networks:
+      - bookflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pricing-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_PRICING}
+    volumes:
+      - pricing-db-data:/var/lib/postgresql/data
+    networks:
+      - bookflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  # MICROSERVICIOS BACKEND
+  # ─────────────────────────────────────────
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@auth-db:5432/${DB_NAME_AUTH}
+      SECRET_KEY: ${JWT_SECRET_KEY}
+      ALGORITHM: ${JWT_ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES}
+      REFRESH_TOKEN_EXPIRE_MINUTES: ${JWT_REFRESH_EXPIRE_MINUTES:-1440}
+      BFF_ORIGIN: ${BFF_ORIGIN:-http://bff-gateway:8009}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - bookflow-network
+    restart: always
+
+  inventory-service:
+    build: ./inventory-service
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@inventory-db:5432/${DB_NAME_INVENTORY}
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+    networks:
+      - bookflow-network
+    restart: always
+
+  catalog-service:
+    build: ./catalog-service
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@catalog-db:5432/${DB_NAME_CATALOG}
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+    networks:
+      - bookflow-network
+    restart: always
+
+  enrichment-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_ENRICHMENT:-enrichment_db}
+    volumes:
+      - enrichment-db-data:/var/lib/postgresql/data
+    networks:
+      - bookflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  order-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_ORDER:-order_db}
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+    networks:
+      - bookflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "8010:8010"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@order-db:5432/${DB_NAME_ORDER:-order_db}
+      INVENTORY_SERVICE_URL: http://inventory-service:8002
+      CATALOG_SERVICE_URL: http://catalog-service:8003
+      PRICING_SERVICE_URL: http://pricing-service:8005
+      HTTP_TIMEOUT: 5.0
+      SERVICE_PORT: 8010
+    depends_on:
+      order-db:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+    networks:
+      - bookflow-network
+    restart: always
+
+  ai-enrichment-service:
+    build: ./ai-enrichment-service
+    ports:
+      - "8004:8004"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@enrichment-db:5432/${DB_NAME_ENRICHMENT:-enrichment_db}
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      OPEN_LIBRARY_BASE_URL: https://openlibrary.org
+      CROSSREF_BASE_URL: https://api.crossref.org
+      CATALOG_SERVICE_URL: http://catalog-service:8003
+      SERVICE_PORT: 8004
+    depends_on:
+      enrichment-db:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+    networks:
+      - bookflow-network
+    restart: always
+
+  pricing-service:
+    build: ./pricing-service
+    ports:
+      - "8005:8005"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pricing-db:5432/${DB_NAME_PRICING:-pricing_db}
+      EBAY_APP_ID: ${EBAY_APP_ID:-}
+      EBAY_BASE_URL: https://api.ebay.com/buy/browse/v1
+      CATALOG_SERVICE_URL: http://catalog-service:8003
+      INVENTORY_SERVICE_URL: http://inventory-service:8002
+      SERVICE_PORT: 8005
+    depends_on:
+      pricing-db:
+        condition: service_healthy
+    networks:
+      - bookflow-network
+    restart: always
+
+  data-quality-module:
+    build: ./data-quality-module
+    ports:
+      - "8007:8007"
+    environment:
+      INVENTORY_SERVICE_URL: http://inventory-service:8002
+    depends_on:
+      - inventory-service
+    networks:
+      - bookflow-network
+    restart: on-failure
+
+  config-module:
+    build: ./config-module
+    ports:
+      - "8008:8008"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@config-db:5432/${DB_NAME_CONFIG}
+    depends_on:
+      config-db:
+        condition: service_healthy
+    networks:
+      - bookflow-network
+    restart: always
+
+  # ─────────────────────────────────────────
+  # SPRINT 3 — AI Assistant & Recommendations
+  # ─────────────────────────────────────────
+  assistant-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_ASSISTANT:-assistant_db}
+    volumes:
+      - assistant-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookflow-network
+
+  audit-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_AUDIT:-audit_db}
+    volumes:
+      - audit-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookflow-network
+
+  ai-assistant-service:
+    build: ./ai-assistant-service
+    ports:
+      - "8011:8011"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@assistant-db:5432/${DB_NAME_ASSISTANT:-assistant_db}
+      CATALOG_SERVICE_URL: http://catalog-service:8003
+      PRICING_SERVICE_URL: http://pricing-service:8005
+      INVENTORY_SERVICE_URL: http://inventory-service:8002
+      HTTP_TIMEOUT: 5.0
+      SERVICE_PORT: 8011
+    depends_on:
+      assistant-db:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+      pricing-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+    networks:
+      - bookflow-network
+    restart: always
+
+  recommendation-service:
+    build: ./recommendation-service
+    ports:
+      - "8012:8012"
+    environment:
+      CATALOG_SERVICE_URL: http://catalog-service:8003
+      HTTP_TIMEOUT: 5.0
+      SERVICE_PORT: 8012
+    depends_on:
+      catalog-service:
+        condition: service_started
+    networks:
+      - bookflow-network
+    restart: always
+
+  bff-gateway:
+    build: ./bff-gateway
+    ports:
+      - "8009:8009"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8001
+      INVENTORY_SERVICE_URL: http://inventory-service:8002
+      CATALOG_SERVICE_URL: http://catalog-service:8003
+      ENRICHMENT_SERVICE_URL: http://ai-enrichment-service:8004
+      PRICING_SERVICE_URL: http://pricing-service:8005
+      DATA_QUALITY_URL: http://data-quality-module:8007
+      CONFIG_MODULE_URL: http://config-module:8008
+      ORDER_SERVICE: http://order-service:8010
+      ORDER_SERVICE_URL: http://order-service:8010
+      ASSISTANT_SERVICE_URL: http://ai-assistant-service:8011
+      RECOMMENDATION_SERVICE_URL: http://recommendation-service:8012
+      AUDIT_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@audit-db:5432/${DB_NAME_AUDIT:-audit_db}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+    depends_on:
+      auth-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      catalog-service:
+        condition: service_started
+      ai-enrichment-service:
+        condition: service_started
+      pricing-service:
+        condition: service_started
+      data-quality-module:
+        condition: service_started
+      config-module:
+        condition: service_started
+      order-service:
+        condition: service_started
+      ai-assistant-service:
+        condition: service_started
+      recommendation-service:
+        condition: service_started
+      audit-db:
+        condition: service_healthy
+    networks:
+      - bookflow-network
+    restart: on-failure
+
+  # ─────────────────────────────────────────
+  # FRONTENDS
+  # ─────────────────────────────────────────
+  admin-frontend:
+    build: ./admin-frontend
+    ports:
+      - "3001:3001"
+    environment:
+      VITE_BFF_URL: ${VITE_BFF_URL:-http://localhost:8009}
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    depends_on:
+      - bff-gateway
+    networks:
+      - bookflow-network
+    restart: on-failure
+
+  commercial-frontend:
+    build: ./commercial-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_BFF_URL: ${VITE_BFF_URL}
+    volumes:
+      - ./commercial-frontend/src:/app/src
+      - ./commercial-frontend/public:/app/public
+    depends_on:
+      - bff-gateway
+    networks:
+      - bookflow-network

@@ -1,0 +1,136 @@
+{
+  "info": {
+    "_postman_id": "ebf08ea4-3c87-4b6a-9f4d-2a8123c5e8b7",
+    "name": "Dev 8 - AICommerce Adapters",
+    "description": "Pruebas de Circuit Breaker, Caché y Adaptadores Externos",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Ver Estado de Adaptadores (Status)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8006/adapters/status",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8006",
+          "path": [
+            "adapters",
+            "status"
+          ]
+        },
+        "description": "Verifica el estado inicial del Circuit Breaker, conteo de fallos y cantidad de elementos en caché."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Prueba Google Books (Cache Miss)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8006/adapters/test/google-books?isbn=9780131103627",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8006",
+          "path": [
+            "adapters",
+            "test",
+            "google-books"
+          ],
+          "query": [
+            {
+              "key": "isbn",
+              "value": "9780131103627"
+            }
+          ]
+        },
+        "description": "Primera petición. Debería demorar el tiempo normal de red y retornar `cached: false`."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Prueba Google Books (Cache Hit)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8006/adapters/test/google-books?isbn=9780131103627",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8006",
+          "path": [
+            "adapters",
+            "test",
+            "google-books"
+          ],
+          "query": [
+            {
+              "key": "isbn",
+              "value": "9780131103627"
+            }
+          ]
+        },
+        "description": "Segunda petición idéntica. Debería responder casi instantáneamente y retornar `cached: true`."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Re-verificar Estado (Status después de Caché)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8006/adapters/status",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8006",
+          "path": [
+            "adapters",
+            "status"
+          ]
+        },
+        "description": "Debería observarse que `cache_items` en google_books incrementó a 1."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Prueba Open Library (Query)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8006/adapters/test/open-library?query=the lord of the rings",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8006",
+          "path": [
+            "adapters",
+            "test",
+            "open-library"
+          ],
+          "query": [
+            {
+              "key": "query",
+              "value": "the lord of the rings"
+            }
+          ]
+        },
+        "description": "Busca un libro en Open Library para demostrar que el adaptador funciona independientemente."
+      },
+      "response": []
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+title,author,book_reference,quantity_available,isbn,condition,defects,observations,external_code
+Cien años de soledad,Gabriel García Márquez,REF-001,5,9780307474728,good,,Edición especial,EXT-001
+Don Quijote de la Mancha,Miguel de Cervantes,REF-002,2,,acceptable,Subrayados en algunas páginas,Primera parte solamente,EXT-002
+1984,George Orwell,REF-003,8,9780451524935,new,,,EXT-003
+El Principito,Antoine de Saint-Exupéry,REF-004,3,9780156012195,like_new,,Incluye ilustraciones originales,EXT-004
+Sapiens: De animales a dioses,Yuval Noah Harari,REF-005,1,9780062316097,good,Portada ligeramente doblada,,EXT-005
+Ficciones,Jorge Luis Borges,REF-006,4,9780802130303,new,,,EXT-006
+La sombra del viento,Carlos Ruiz Zafón,REF-007,6,9788408163435,good,,,EXT-007
+Rayuela,Julio Cortázar,REF-008,2,9788437604572,acceptable,Anotaciones al margen,,EXT-008
+El amor en los tiempos del cólera,Gabriel García Márquez,REF-009,3,9780307389732,good,,,EXT-009
+Fahrenheit 451,Ray Bradbury,REF-010,7,9781451673319,new,,,EXT-010
+,Autor Faltante,REF-011,2,,,,,
+Sin Título,Miguel López,REF-012,-5,,,Cantidad negativa inválida,,

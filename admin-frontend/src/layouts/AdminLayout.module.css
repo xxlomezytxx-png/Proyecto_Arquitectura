@@ -1,0 +1,25 @@
+.wrapper { display: flex; height: 100vh; }
+
+.sidebar {
+  width: 240px;
+  background: #0f172a;
+  color: white;
+  padding: 24px;
+}
+
+.logo { font-weight: 700; margin-bottom: 24px; }
+
+.nav { display: flex; flex-direction: column; gap: 8px; }
+
+.navItem { color: #94a3b8; font-size: 14px; }
+.active { color: #ffffff; font-weight: 600; }
+
+.main { flex: 1; display: flex; flex-direction: column; }
+
+.header {
+  background: var(--surface);
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.content { padding: 24px; overflow-y: auto; }
